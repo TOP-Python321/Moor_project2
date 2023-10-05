@@ -26,3 +26,8 @@ class Feed(Action):
 
     def action(self):
         self.origin.params[Satiety] += self.amount
+
+
+class PlayRope(Action):
+    def action(self):
+        print("play with rope")
