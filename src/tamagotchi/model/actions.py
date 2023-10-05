@@ -31,3 +31,7 @@ class Feed(Action):
 class PlayRope(Action):
     def action(self):
         print("play with rope")
+
+class Sleep(Action):
+    def action(self):
+        print("is sleeping")
