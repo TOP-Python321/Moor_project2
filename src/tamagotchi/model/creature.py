@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from enum import Enum
 from numbers import Real
+from pathlib import Path
 from typing import Type
 
 
@@ -19,7 +21,15 @@ class Creature:
         self.mature: Maturity = Maturity.CUB
         self.params: dict[Type, Parameter] = {
             cls: cls(param.value, param.min, param.max, self)
-            for cls, param in kind.value[self.mature].params.items()
+            for cls, param in kind[self.mature].params.items()
+        }
+        self.player_actions: list[Action] = [
+            act.__class__(**(act.__dict__ | {'origin': self}))
+            for act in kind[self.mature].player_actions
+        ]
+        self.creature_actions: set[Action] = {
+            act.__class__(**(act.__dict__ | {'origin': self}))
+            for act in kind[self.mature].creature_actions
         }
         self.history: History = History()
 
@@ -29,11 +39,11 @@ class Creature:
 
     def _grow_up(self, new_mature: Maturity):
         # Maturity(self.mature.value + 1)
-        for cls, param in self.kind.value[new_mature].params.items():
+        for cls, param in self.kind[new_mature].params.items():
             self.params[cls].min = param.min
             self.params[cls].max = param.max
 
-    def save(self):
+    def autosave(self):
         state = State(self.age)
         for param in self.params.values():
             setattr(state, param.__class__.__name__, param.value)
@@ -56,6 +66,7 @@ class State:
     Хранитель.
     Атрибуты экземпляра формируются динамически.
     """
+
     def __init__(self, age: int):
         self.age = age
 
@@ -106,47 +117,139 @@ class Parameter(ABC):
 
 class Health(Parameter):
     def update(self):
-        hunger = self.origin.kind.value[self.origin.mature].params[Hunger]
+        hunger = self.origin.kind[self.origin.mature].params[Satiety]
         critical = sum(hunger.range) / 4
-        if self.origin.params[Hunger].value < critical:
+        if self.origin.params[Satiety].value < critical:
             self.value -= 0.5
 
 
-class Hunger(Parameter):
+class Satiety(Parameter):
     def update(self):
         self.value -= 1
 
 
-class KindParameters:
-    def __init__(self, days: int, *params: Parameter):
+class Action(ABC):
+    name: str
+
+    def __init__(
+            self,
+            timer: int = None,
+            origin: Creature = None,
+    ):
+        self.timer = timer
+        self.origin = origin
+
+    @abstractmethod
+    def action(self):
+        pass
+
+
+class Feed(Action):
+    def __init__(
+            self,
+            amount: int,
+            timer: int = None,
+            origin: Creature = None,
+    ):
+        super().__init__(timer, origin)
+        self.amount = amount
+
+    def action(self):
+        self.origin.params[Satiety].value += self.amount
+
+
+class PlayRope(Action):
+    def action(self):
+        print('верёвочка!')
+
+
+class Sleep(Action):
+    def action(self):
+        print('сон')
+
+
+class MatureOptions:
+    def __init__(
+            self,
+            days: int,
+            *params: Parameter,
+            player_actions: list[Action],
+            creature_actions: set[Action]
+    ):
         self.days = days
         self.params: dict[Type, Parameter] = {
             param.__class__: param
             for param in params
         }
+        self.player_actions = player_actions
+        self.creature_actions = creature_actions
 
 
-class Kind(Enum):
-    CAT = {
-        Maturity.CUB: KindParameters(
+AgesParameters = dict[Maturity, MatureOptions] | Iterable[tuple[Maturity, MatureOptions]]
+
+
+class Kind(dict):
+    def __init__(
+            self,
+            name: str,
+            image_path: str | Path,
+            ages_parameters: AgesParameters,
+    ):
+        super().__init__(ages_parameters)
+        self.name = name
+        self.image = Path(image_path)
+
+
+cat_kind = Kind(
+    'Кот',
+    'data/images/cat.png',
+    {
+        Maturity.CUB: MatureOptions(
             4,
             Health(10, 0, 20),
-            Hunger(5, 0, 25),
+            Satiety(5, 0, 25),
+            player_actions=[
+                Feed(20),
+            ],
+            creature_actions={
+                PlayRope(100),
+            }
         ),
-        Maturity.YOUNG: KindParameters(
+        Maturity.YOUNG: MatureOptions(
             10,
             Health(0, 0, 50),
-            Hunger(0, 0, 30),
+            Satiety(0, 0, 30),
+            player_actions=[
+                Feed(25),
+            ],
+            creature_actions={
+                PlayRope(100),
+                Sleep(120),
+            }
         ),
-        Maturity.ADULT: KindParameters(
+        Maturity.ADULT: MatureOptions(
             20,
             Health(0, 0, 45),
-            Hunger(0, 0, 25),
+            Satiety(0, 0, 25),
+            player_actions=[
+                Feed(20),
+            ],
+            creature_actions={
+                Sleep(60),
+                PlayRope(180),
+            }
         ),
-        Maturity.OLD: KindParameters(
+        Maturity.OLD: MatureOptions(
             12,
             Health(0, 0, 35),
-            Hunger(0, 0, 20),
+            Satiety(0, 0, 20),
+            player_actions=[
+                Feed(10),
+            ],
+            creature_actions={
+                Sleep(30)
+            }
         ),
     }
+)
 
