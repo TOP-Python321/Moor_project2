@@ -173,6 +173,9 @@ class Sleep(Action):
         print('сон')
 
 
+class Poop(Action):
+    def action(self):
+        print('do a crap')
 
 
 class MatureOptions:
