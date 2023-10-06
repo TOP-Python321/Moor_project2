@@ -168,8 +168,14 @@ class PlayRope(Action):
         print('верёвочка!')
 
 
+class TailPlay(Action):
+    def action(self):
+        print('playing with the tail')
+
+
 class Sleep(Action):
     def action(self):
+        self.origin.params[Toilet].value += 1
         print('сон')
 
 
