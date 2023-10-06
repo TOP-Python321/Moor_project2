@@ -133,6 +133,11 @@ class Toilet(Parameter):
         self.value += 1
 
 
+class Mood(Parameter):
+    def update(self):
+        self.value -= 1
+
+
 class Action(ABC):
     name: str
 
@@ -225,6 +230,7 @@ cat_kind = Kind(
             Health(10, 0, 20),
             Satiety(5, 0, 25),
             Toilet(5, 0, 15),
+            Mood(5, 0, 10),
             player_actions=[
                 Feed(20),
             ],
@@ -238,6 +244,7 @@ cat_kind = Kind(
             Health(0, 0, 50),
             Satiety(0, 0, 30),
             Toilet(0, 0, 20),
+            Mood(0, 0, 25),
             player_actions=[
                 Feed(25),
             ],
@@ -252,6 +259,7 @@ cat_kind = Kind(
             Health(0, 0, 45),
             Satiety(0, 0, 25),
             Toilet(0, 0, 25),
+            Mood(0, 0, 20),
             player_actions=[
                 Feed(20),
             ],
@@ -266,6 +274,7 @@ cat_kind = Kind(
             Health(0, 0, 35),
             Satiety(0, 0, 20),
             Toilet(0, 0, 15),
+            Mood(0, 0, 15),
             player_actions=[
                 Feed(10),
             ],
@@ -285,22 +294,24 @@ dog_kind = Kind(
             4,
             Health(10, 0, 20),
             Satiety(5, 0, 25),
+            Toilet(5, 0, 10),
             player_actions=[
                 Feed(20),
             ],
             creature_actions={
-                PlayRope(100),
+                TailPlay(100),
             }
         ),
         Maturity.YOUNG: MatureOptions(
             10,
             Health(0, 0, 50),
             Satiety(0, 0, 30),
+            Toilet(0, 0, 20),
             player_actions=[
                 Feed(25),
             ],
             creature_actions={
-                PlayRope(100),
+                TailPlay(100),
                 Sleep(120),
             }
         ),
@@ -308,18 +319,20 @@ dog_kind = Kind(
             20,
             Health(0, 0, 45),
             Satiety(0, 0, 25),
+            Toilet(0, 0, 25),
             player_actions=[
                 Feed(20),
             ],
             creature_actions={
                 Sleep(60),
-                PlayRope(180),
+                TailPlay(180),
             }
         ),
         Maturity.OLD: MatureOptions(
             12,
             Health(0, 0, 35),
             Satiety(0, 0, 20),
+            Toilet(0, 0, 15),
             player_actions=[
                 Feed(10),
             ],
