@@ -1,4 +1,4 @@
-from model.creature import Maturity, Creature, Kind, Health, Satiety, Toilet, cat_kind
+from model.creature import Maturity, Creature, Health, Satiety, Toilet, Mood, cat_kind
 import pytest
 
 
@@ -60,3 +60,14 @@ def test_toilet_update(value, min_, max_, expected):
     toilet = Toilet(value, min_, max_, creature)
     toilet.update()
     assert toilet.value == expected
+
+
+@pytest.mark.parametrize('value, min_, max_, expected', [(5, 0, 10, 4),
+                                                         (0, 0, 25, 0),
+                                                         (0, 0, 20, 0),
+                                                         (0, 0, 15, 0)])
+def test_mood_update(value, min_, max_, expected):
+    creature = Creature(cat_kind, 'Ovca')
+    mood = Mood(value, min_, max_, creature)
+    mood.update()
+    assert mood.value == expected
