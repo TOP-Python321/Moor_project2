@@ -128,6 +128,11 @@ class Satiety(Parameter):
         self.value -= 1
 
 
+class Toilet(Parameter):
+    def update(self):
+        self.value += 1
+
+
 class Action(ABC):
     name: str
 
@@ -166,6 +171,8 @@ class PlayRope(Action):
 class Sleep(Action):
     def action(self):
         print('сон')
+
+
 
 
 class MatureOptions:
@@ -208,46 +215,54 @@ cat_kind = Kind(
             4,
             Health(10, 0, 20),
             Satiety(5, 0, 25),
+            Toilet(5, 0, 15),
             player_actions=[
                 Feed(20),
             ],
             creature_actions={
                 PlayRope(100),
+                Poop(90)
             }
         ),
         Maturity.YOUNG: MatureOptions(
             10,
             Health(0, 0, 50),
             Satiety(0, 0, 30),
+            Toilet(0, 0, 20),
             player_actions=[
                 Feed(25),
             ],
             creature_actions={
                 PlayRope(100),
                 Sleep(120),
+                Poop(150)
             }
         ),
         Maturity.ADULT: MatureOptions(
             20,
             Health(0, 0, 45),
             Satiety(0, 0, 25),
+            Toilet(0, 0, 25),
             player_actions=[
                 Feed(20),
             ],
             creature_actions={
                 Sleep(60),
                 PlayRope(180),
+                Poop(200)
             }
         ),
         Maturity.OLD: MatureOptions(
             12,
             Health(0, 0, 35),
             Satiety(0, 0, 20),
+            Toilet(0, 0, 15),
             player_actions=[
                 Feed(10),
             ],
             creature_actions={
-                Sleep(30)
+                Sleep(30),
+                Poop(120)
             }
         ),
     }
