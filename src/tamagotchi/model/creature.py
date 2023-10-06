@@ -170,22 +170,26 @@ class Feed(Action):
 
 class PlayRope(Action):
     def action(self):
+        self.origin.params[Mood].value += 1
         print('верёвочка!')
 
 
 class TailPlay(Action):
     def action(self):
+        self.origin.params[Mood].value += 1
         print('playing with the tail')
 
 
 class Sleep(Action):
     def action(self):
-        self.origin.params[Toilet].value += 1
+        self.origin.params[Mood].value -= 0.2
+        self.origin.params[Toilet].value += 0.5
         print('сон')
 
 
 class Poop(Action):
     def action(self):
+        self.origin.params[Toilet].value -= 5
         print('do a crap')
 
 
