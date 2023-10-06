@@ -253,3 +253,56 @@ cat_kind = Kind(
     }
 )
 
+dog_kind = Kind(
+    'Собака',
+    'data/images/dog.png',
+    {
+        Maturity.CUB: MatureOptions(
+            4,
+            Health(10, 0, 20),
+            Satiety(5, 0, 25),
+            player_actions=[
+                Feed(20),
+            ],
+            creature_actions={
+                PlayRope(100),
+            }
+        ),
+        Maturity.YOUNG: MatureOptions(
+            10,
+            Health(0, 0, 50),
+            Satiety(0, 0, 30),
+            player_actions=[
+                Feed(25),
+            ],
+            creature_actions={
+                PlayRope(100),
+                Sleep(120),
+            }
+        ),
+        Maturity.ADULT: MatureOptions(
+            20,
+            Health(0, 0, 45),
+            Satiety(0, 0, 25),
+            player_actions=[
+                Feed(20),
+            ],
+            creature_actions={
+                Sleep(60),
+                PlayRope(180),
+            }
+        ),
+        Maturity.OLD: MatureOptions(
+            12,
+            Health(0, 0, 35),
+            Satiety(0, 0, 20),
+            player_actions=[
+                Feed(10),
+            ],
+            creature_actions={
+                Sleep(30)
+            }
+        ),
+    }
+)
+
