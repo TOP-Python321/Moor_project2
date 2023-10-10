@@ -1,7 +1,12 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from enum import Enum
 from numbers import Real
-from typing import Type
+from pathlib import Path
+from sys import path
+from typing import Type, Self
+
+ROOT_DIR = Path(path[0]).parent.parent
 
 
 class Maturity(Enum):
@@ -19,9 +24,26 @@ class Creature:
         self.mature: Maturity = Maturity.CUB
         self.params: dict[Type, Parameter] = {
             cls: cls(param.value, param.min, param.max, self)
-            for cls, param in kind.value[self.mature].params.items()
+            for cls, param in kind[self.mature].params.items()
+        }
+        self.player_actions: list[Action] = [
+            act.__class__(**(act.__dict__ | {'origin': self}))
+            for act in kind[self.mature].player_actions
+        ]
+        self.creature_actions: set[Action] = {
+            act.__class__(**(act.__dict__ | {'origin': self}))
+            for act in kind[self.mature].creature_actions
         }
         self.history: History = History()
+
+    def __repr__(self):
+        return '\n'.join(
+            f'{param.name}: {param.value:.1f}'
+            for cls, param in self.params.items()
+        )
+
+    def __str__(self):
+        return f"{self.name}: {'/'.join(f'{p.value:.1f}' for p in self.params.values())}"
 
     def update(self):
         for param in self.params.values():
@@ -29,18 +51,15 @@ class Creature:
 
     def _grow_up(self, new_mature: Maturity):
         # Maturity(self.mature.value + 1)
-        for cls, param in self.kind.value[new_mature].params.items():
+        for cls, param in self.kind[new_mature].params.items():
             self.params[cls].min = param.min
             self.params[cls].max = param.max
 
-    def save(self):
+    def autosave(self):
         state = State(self.age)
         for param in self.params.values():
             setattr(state, param.__class__.__name__, param.value)
         self.history.append(state)
-
-    def __repr__(self):
-        return f"<{self.name}: {'/'.join(f'{p.value:.1f}' for p in self.params.values())}>"
 
 
 class History(list):
@@ -64,6 +83,8 @@ class State:
 
 
 class Parameter(ABC):
+    name: str
+
     def __init__(
             self,
             value: float,
@@ -105,48 +126,273 @@ class Parameter(ABC):
 
 
 class Health(Parameter):
+    name = 'здоровье'
+
     def update(self):
-        hunger = self.origin.kind.value[self.origin.mature].params[Hunger]
+        hunger = self.origin.kind[self.origin.mature].params[Satiety]
         critical = sum(hunger.range) / 4
-        if self.origin.params[Hunger].value < critical:
+        if self.origin.params[Satiety].value < critical:
             self.value -= 0.5
 
 
-class Hunger(Parameter):
+class Satiety(Parameter):
+    name = 'сытость'
+
     def update(self):
         self.value -= 1
 
 
-class KindParameters:
-    def __init__(self, days: int, *params: Parameter):
+class Action(ABC):
+    name: str
+
+    def __init__(
+            self,
+            timer: int = None,
+            image: str | Path = None,
+            origin: Creature = None,
+            **kwargs
+    ):
+        self.timer = timer
+        self.image = image
+        self.origin = origin
+        self.state = 'normal'
+
+    @abstractmethod
+    def action(self) -> str:
+        pass
+
+
+class NoAction:
+    __instance: Self = None
+
+    def __new__(cls):
+        if cls.__instance is None:
+            self = super().__new__(cls)
+            self.image = ROOT_DIR / 'data/images/no_action.png'
+            self.state = 'disabled'
+            self.action = lambda: None
+            cls.__instance = self
+        return cls.__instance
+
+
+class Feed(Action):
+    name = 'покормить питомца'
+
+    def __init__(
+            self,
+            amount: int,
+            timer: int = None,
+            image: str | Path = None,
+            origin: Creature = None,
+            **kwargs
+    ):
+        super().__init__(timer, image, origin)
+        self.amount = amount
+
+    def action(self) -> str:
+        self.origin.params[Satiety].value += self.amount
+        return f'вы покормили {self.origin.name}'
+
+
+class Play(Action):
+    name = 'поиграть с питомцем'
+
+    def action(self) -> str:
+        return f'вы играете с {self.origin.name}'
+
+
+class PlayRope(Action):
+    def action(self) -> str:
+        return 'верёвочка!'
+
+
+class PlayTail(Action):
+    def action(self) -> str:
+        return 'бегает за хвостом'
+
+
+class Sleep(Action):
+    def action(self) -> str:
+        return 'сон'
+
+
+class MatureOptions:
+    def __init__(
+            self,
+            days: int,
+            *params: Parameter,
+            player_actions: list[Action],
+            creature_actions: set[Action]
+    ):
         self.days = days
         self.params: dict[Type, Parameter] = {
             param.__class__: param
             for param in params
         }
+        self.player_actions = player_actions
+        self.creature_actions = creature_actions
 
 
-class Kind(Enum):
-    CAT = {
-        Maturity.CUB: KindParameters(
+AgesParameters = dict[Maturity, MatureOptions] | Iterable[tuple[Maturity, MatureOptions]]
+
+class Kind(dict):
+    def __init__(
+            self,
+            name: str,
+            image_path: str | Path,
+            ages_parameters: AgesParameters,
+    ):
+        super().__init__(ages_parameters)
+        self.name = name
+        self.image = Path(image_path)
+
+
+
+cat_kind = Kind(
+    'Кот',
+    ROOT_DIR / 'data/images/cat.png',
+    {
+        Maturity.CUB: MatureOptions(
             4,
             Health(10, 0, 20),
-            Hunger(5, 0, 25),
+            Satiety(5, 0, 25),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+                Play(image=ROOT_DIR / 'data/images/btn2.png')
+            ],
+            creature_actions={
+                PlayRope(timer=100),
+            }
         ),
-        Maturity.YOUNG: KindParameters(
+        Maturity.YOUNG: MatureOptions(
             10,
             Health(0, 0, 50),
-            Hunger(0, 0, 30),
+            Satiety(0, 0, 30),
+            player_actions=[
+                Feed(amount=25, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                PlayRope(timer=100),
+                Sleep(timer=120),
+            }
         ),
-        Maturity.ADULT: KindParameters(
+        Maturity.ADULT: MatureOptions(
             20,
             Health(0, 0, 45),
-            Hunger(0, 0, 25),
+            Satiety(0, 0, 25),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                Sleep(timer=60),
+                PlayRope(timer=180),
+            }
         ),
-        Maturity.OLD: KindParameters(
+        Maturity.OLD: MatureOptions(
             12,
             Health(0, 0, 35),
-            Hunger(0, 0, 20),
+            Satiety(0, 0, 20),
+            player_actions=[
+                Feed(amount=10, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                Sleep(timer=30)
+            }
         ),
     }
+)
+dog_kind = Kind(
+    'Пёс',
+    ROOT_DIR / 'data/images/dog.png',
+    {
+        Maturity.CUB: MatureOptions(
+            4,
+            Health(12, 0, 25),
+            Satiety(7, 0, 25),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                PlayTail(timer=100),
+            }
+        ),
+        Maturity.YOUNG: MatureOptions(
+            11,
+            Health(0, 0, 50),
+            Satiety(0, 0, 30),
+            player_actions=[
+                Feed(amount=25, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                PlayTail(timer=100),
+                Sleep(timer=120),
+            }
+        ),
+        Maturity.ADULT: MatureOptions(
+            20,
+            Health(0, 0, 45),
+            Satiety(0, 0, 25),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                Sleep(timer=60),
+                PlayTail(timer=180),
+            }
+        ),
+        Maturity.OLD: MatureOptions(
+            12,
+            Health(0, 0, 35),
+            Satiety(0, 0, 20),
+            player_actions=[
+                Feed(amount=10, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions={
+                Sleep(timer=30)
+            }
+        ),
+    }
+)
+mouse_kind = Kind(
+    'Мыш',
+    ROOT_DIR / 'data/images/mouse.png',
+    {
+        Maturity.CUB: MatureOptions(
+            4,
+            Health(5, 0, 15),
+            Satiety(5, 0, 15),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+        Maturity.YOUNG: MatureOptions(
+            11,
+            Health(0, 0, 50),
+            Satiety(0, 0, 30),
+            player_actions=[
+                Feed(amount=25, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+        Maturity.ADULT: MatureOptions(
+            20,
+            Health(0, 0, 45),
+            Satiety(0, 0, 25),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+        Maturity.OLD: MatureOptions(
+            12,
+            Health(0, 0, 35),
+            Satiety(0, 0, 20),
+            player_actions=[
+                Feed(amount=10, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+    }
+)
 
