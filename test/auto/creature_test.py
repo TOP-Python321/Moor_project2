@@ -1,8 +1,8 @@
-from model.creature import Maturity, Creature, Health, Satiety, Toilet, Mood, cat_kind
+from model.creature import Maturity, Creature, Health, Satiety, Toilet, Mood, cat_kind, dog_kind
 import pytest
 
 
-@pytest.mark.parametrize('kind, name', [(cat_kind, "Ovca"), (cat_kind, "1234")])
+@pytest.mark.parametrize('kind, name', [(cat_kind, "Ovca"), (cat_kind, "1234"), (dog_kind, 'dog'), (dog_kind, 'pet')])
 def test_creature_init(kind, name):
     creature = Creature(kind, name)
     assert creature.name == name
