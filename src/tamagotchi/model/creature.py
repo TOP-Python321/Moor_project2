@@ -126,7 +126,7 @@ class Parameter(ABC):
 
 
 class Health(Parameter):
-    name = 'здоровье'
+    name = 'Здоровье'
 
     def update(self):
         hunger = self.origin.kind[self.origin.mature].params[Satiety]
@@ -136,7 +136,21 @@ class Health(Parameter):
 
 
 class Satiety(Parameter):
-    name = 'сытость'
+    name = 'Сытость'
+
+    def update(self):
+        self.value -= 1
+
+
+class Toilet(Parameter):
+    name = 'Туалет'
+
+    def update(self):
+        self.value += 1
+
+
+class Mood(Parameter):
+    name = 'Настроение'
 
     def update(self):
         self.value -= 1
@@ -197,23 +211,84 @@ class Feed(Action):
 class Play(Action):
     name = 'поиграть с питомцем'
 
+    def __init__(
+            self,
+            amount: int,
+            timer: int = None,
+            image: str | Path = None,
+            origin: Creature = None,
+            **kwargs
+    ):
+        super().__init__(timer, image, origin)
+        self.amount = amount
+
     def action(self) -> str:
+        self.origin.params[Mood].value += self.amount
         return f'вы играете с {self.origin.name}'
 
 
 class PlayRope(Action):
-    def action(self) -> str:
-        return 'верёвочка!'
+    name = 'поиграть с веревочкой'
+
+    def __init__(
+            self,
+            amount: int,
+            timer: int = None,
+            image: str | Path = None,
+            origin: Creature = None,
+            **kwargs
+    ):
+        super().__init__(timer, image, origin)
+        self.amount = amount
+
+    def action(self):
+        self.origin.params[Mood].value += self.amount
+        return f'{self.origin.name} играет с веревочкой'
 
 
 class PlayTail(Action):
-    def action(self) -> str:
-        return 'бегает за хвостом'
+    name = 'поиграть с хвостом'
+
+    def __init__(
+            self,
+            amount: int,
+            timer: int = None,
+            image: str | Path = None,
+            origin: Creature = None,
+            **kwargs
+    ):
+        super().__init__(timer, image, origin)
+        self.amount = amount
+
+    def action(self):
+        self.origin.params[Mood].value += self.amount
+        return f'{self.origin.name} играет с хвостом'
 
 
 class Sleep(Action):
-    def action(self) -> str:
-        return 'сон'
+    name = 'лечь спать'
+
+    def __init__(
+            self,
+            amount: int,
+            timer: int = None,
+            image: str | Path = None,
+            origin: Creature = None,
+            **kwargs
+    ):
+        super().__init__(timer, image, origin)
+        self.amount = amount
+
+    def action(self):
+        self.origin.params[Toilet].value += 0.5
+        self.origin.params[Mood].value += self.amount
+        return f'{self.origin.name} спит'
+
+
+class Poop(Action):
+    def action(self):
+        self.origin.params[Toilet].value -= 5
+        return f'{self.origin.name} нагадил'
 
 
 class MatureOptions:
@@ -235,6 +310,7 @@ class MatureOptions:
 
 AgesParameters = dict[Maturity, MatureOptions] | Iterable[tuple[Maturity, MatureOptions]]
 
+
 class Kind(dict):
     def __init__(
             self,
@@ -247,7 +323,6 @@ class Kind(dict):
         self.image = Path(image_path)
 
 
-
 cat_kind = Kind(
     'Кот',
     ROOT_DIR / 'data/images/cat.png',
@@ -256,23 +331,29 @@ cat_kind = Kind(
             4,
             Health(10, 0, 20),
             Satiety(5, 0, 25),
+            Toilet(5, 0, 15),
+            Mood(5, 0, 10),
             player_actions=[
                 Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
-                Play(image=ROOT_DIR / 'data/images/btn2.png')
+                Play(amount=10, image=ROOT_DIR / 'data/images/btn2.png'),
+                PlayRope(amount=10, image=ROOT_DIR / 'data/images/btn3.png')
             ],
             creature_actions={
-                PlayRope(timer=100),
+                PlayRope(amount=10, timer=100),
             }
         ),
         Maturity.YOUNG: MatureOptions(
             10,
             Health(0, 0, 50),
             Satiety(0, 0, 30),
+            Toilet(0, 0, 20),
+            Mood(0, 0, 25),
             player_actions=[
                 Feed(amount=25, image=ROOT_DIR / 'data/images/btn1.png'),
+                PlayRope(amount=10, image=ROOT_DIR / 'data/images/btn3.png')
             ],
             creature_actions={
-                PlayRope(timer=100),
+                PlayRope(amount=10, timer=100),
                 Sleep(timer=120),
             }
         ),
@@ -280,20 +361,26 @@ cat_kind = Kind(
             20,
             Health(0, 0, 45),
             Satiety(0, 0, 25),
+            Toilet(0, 0, 25),
+            Mood(0, 0, 20),
             player_actions=[
                 Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+                PlayRope(amount=10, image=ROOT_DIR / 'data/images/btn3.png')
             ],
             creature_actions={
                 Sleep(timer=60),
-                PlayRope(timer=180),
+                PlayRope(amount=10, timer=180),
             }
         ),
         Maturity.OLD: MatureOptions(
             12,
             Health(0, 0, 35),
             Satiety(0, 0, 20),
+            Toilet(0, 0, 15),
+            Mood(0, 0, 15),
             player_actions=[
                 Feed(amount=10, image=ROOT_DIR / 'data/images/btn1.png'),
+                PlayRope(amount=10, image=ROOT_DIR / 'data/images/btn3.png')
             ],
             creature_actions={
                 Sleep(timer=30)
@@ -395,4 +482,50 @@ mouse_kind = Kind(
         ),
     }
 )
+
+
+turtle_kind = Kind(
+    'Черепаха',
+    ROOT_DIR / 'data/images/mouse.png',
+    {
+        Maturity.CUB: MatureOptions(
+            4,
+            Health(5, 0, 15),
+            Satiety(5, 0, 15),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+        Maturity.YOUNG: MatureOptions(
+            11,
+            Health(0, 0, 50),
+            Satiety(0, 0, 30),
+            player_actions=[
+                Feed(amount=25, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+        Maturity.ADULT: MatureOptions(
+            20,
+            Health(0, 0, 45),
+            Satiety(0, 0, 25),
+            player_actions=[
+                Feed(amount=20, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+        Maturity.OLD: MatureOptions(
+            12,
+            Health(0, 0, 35),
+            Satiety(0, 0, 20),
+            player_actions=[
+                Feed(amount=10, image=ROOT_DIR / 'data/images/btn1.png'),
+            ],
+            creature_actions=set()
+        ),
+    }
+)
+
+
 
